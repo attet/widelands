@@ -255,10 +255,6 @@ private:
 	/// instead, the map will be scrolled
 	bool mouse_locked_;
 
-	/// If the mouse needs to be moved in warp_mouse(), this Vector2i is
-	/// used to cancel the resulting SDL_MouseMotionEvent.
-	Vector2i mouse_compensate_warp_;
-
 	/// Makes it possible to disable the fullscreen and screenshot shortcuts
 	bool handle_key_enabled_;
 
