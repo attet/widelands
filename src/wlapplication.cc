@@ -841,6 +841,9 @@ bool WLApplication::poll_event(SDL_Event& ev) {
 		if (mouse_locked_) {
 			ev.motion.x = mouse_position_.x;
 			ev.motion.y = mouse_position_.y;
+			static double mul = 1.9;
+			ev.motion.xrel*=mul;
+			ev.motion.yrel*=mul;
 		}
 		break;
 
@@ -1055,9 +1058,9 @@ void WLApplication::warp_mouse(const Vector2i position) {
 		SDL_Window* sdl_window = g_gr->get_sdlwindow();
 		if (sdl_window != nullptr) {
 			if (!mouse_locked_) {
+				SDL_WarpMouseInWindow(sdl_window, position.x, position.y);
 				SDL_PumpEvents();
 				SDL_FlushEvent(SDL_MOUSEMOTION);
-				SDL_WarpMouseInWindow(sdl_window, position.x, position.y);
 				return;
 			}
 		}
