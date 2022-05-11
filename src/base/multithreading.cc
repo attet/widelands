@@ -78,7 +78,10 @@ void NoteThreadSafeFunction::instantiate(const std::function<void()>& fn,
 		fn();
 	} else {
 		// All other threads must ask it politely to do this for them.
+		std::mutex mu;
 		if (wait_until_completion) {
+			std::unique_lock<std::mutex> lk(mu);
+			std::condition_variable cv;
 			bool done = false;
 
 			// Some codepaths want to perform special error handling, so we catch
@@ -86,7 +89,8 @@ void NoteThreadSafeFunction::instantiate(const std::function<void()>& fn,
 			// Only if the caller waits for completion of course.
 			const std::exception* error = nullptr;
 
-			Notifications::publish(NoteThreadSafeFunction([fn, &done, &error, rethrow_errors]() {
+			Notifications::publish(NoteThreadSafeFunction([fn, &done, &cv, &mu, &error, rethrow_errors]() {
+				std::lock_guard<std::mutex> lk(mu);
 				try {
 					fn();
 				} catch (const std::exception& e) {
@@ -94,17 +98,17 @@ void NoteThreadSafeFunction::instantiate(const std::function<void()>& fn,
 						error = &e;
 					} else {
 						done = true;
+						cv.notify_all();
 						throw;
 					}
 				}
 				done = true;
+				cv.notify_all();
 			}));
-			while (!done) {  // NOLINT
-				// Wait until the NoteThreadSafeFunction has been handled.
-				// Since `done` was passed by address, it will set to
-				// `true` when the function has been executed.
-				SDL_Delay(2);
-			}
+			{
+				std::unique_lock<std::mutex> lk(mu);
+                cv.wait(lk, [&done]{return done;});
+            }
 
 			if (error != nullptr) {
 				throw *error;
@@ -155,10 +159,6 @@ static std::string to_string(const MutexLock::ID i) {
 }
 #endif
 
-constexpr uint32_t kMutexPriorityLockInterval = 1;
-constexpr uint32_t kMutexNormalLockInterval = 1;
-constexpr uint32_t kMutexLogicFrameLockInterval = 20;
-
 // To protect the global mutex list
 std::mutex MutexLock::s_mutex_;
 MutexLock::MutexLock(ID i) : MutexLock(i, []() {}) {
@@ -175,32 +175,9 @@ MutexLock::MutexLock(ID i, const std::function<void()>& run_while_waiting) : id_
 	MutexRecord& record = g_mutex[id_];
 	s_mutex_.unlock();
 
-	// When several threads are waiting to grab the same mutex, the first one is advantaged
-	// by giving it a lower sleep time between attempts. This keeps overall waiting times low.
-	// The Logic Frame mutex's extended sleep time is higher because it's locked much longer.
-	const bool has_priority = (record.nr_waiting_threads.load() == 0 || is_initializer_thread());
-	const uint32_t sleeptime = has_priority             ? kMutexPriorityLockInterval :
-	                           (id_ == ID::kLogicFrame) ? kMutexLogicFrameLockInterval :
-                                                         kMutexNormalLockInterval;
 	++record.nr_waiting_threads;
-	if (!has_priority && record.current_owner != self) {
-		SDL_Delay(sleeptime);
-	}
 
-	uint32_t last_function_call = 0;
-	while (!record.mutex.try_lock()) {
-		const uint32_t now = SDL_GetTicks();
-		if (now - last_function_call > sleeptime) {
-			run_while_waiting();
-			last_function_call = SDL_GetTicks();
-		} else {
-			SDL_Delay(sleeptime - (now - last_function_call));
-		}
-
-#ifdef MUTEX_LOCK_DEBUG
-		++counter;
-#endif
-	}
+	record.mutex.lock();
 
 	assert(record.nr_waiting_threads > 0);
 	--record.nr_waiting_threads;

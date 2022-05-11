@@ -392,6 +392,8 @@ private:
 	bool in_act_;  ///< if do_act is currently running
 	std::string signal_;
 
+	mutable std::mutex mu_;
+
 	// saving and loading
 protected:
 	struct Loader : public MapObject::Loader {

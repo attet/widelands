@@ -183,7 +183,7 @@ void Bob::act(Game& game, uint32_t const data) {
  * Perform the actual call to update() as appropriate.
  */
 void Bob::do_act(Game& game) {
-	MutexLock m(MutexLock::ID::kObjects);
+	const std::lock_guard<std::mutex> lock(mu_);
 	assert(!in_act_);
 	assert(!stack_.empty());
 
@@ -809,6 +809,7 @@ void Bob::draw(const EditorGameBase& egbase,
                const Widelands::Coords& coords,
                const float scale,
                RenderTarget* dst) const {
+	const std::lock_guard<std::mutex> lock(mu_);
 	if (anim_ == 0u) {
 		return;
 	}

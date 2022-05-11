@@ -72,7 +72,7 @@ struct Message {
 	     sub_type_(subt),
 	     title_(init_title),
 	     icon_filename_(init_icon_filename),
-	     icon_(g_image_cache->get(init_icon_filename)),
+	     icon_(),
 	     heading_(init_heading),
 	     body_(init_body),
 	     sent_(sent_time),
@@ -97,6 +97,7 @@ struct Message {
 		return icon_filename_;
 	}
 	const Image* icon() const {
+		const_cast<Message*>(this)->icon_ = const_cast<Image*>(g_image_cache->get(icon_filename_));
 		return icon_;
 	}
 	const std::string& heading() const {

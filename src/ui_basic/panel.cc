@@ -180,8 +180,6 @@ Panel::ModalGuard::~ModalGuard() {
 
 std::atomic_bool Panel::logic_thread_running_(false);
 
-constexpr uint32_t kGameLogicDelay = 50;
-
 // static
 void Panel::logic_thread() {
 	set_logic_thread();
@@ -222,9 +220,6 @@ void Panel::logic_thread() {
 				NEVER_HERE();
 			}
 		}
-
-		// Always sleep a bit because another thread might want to lock our mutex
-		SDL_Delay(kGameLogicDelay);
 	}
 	logic_thread_running_ = false;
 }
@@ -266,7 +261,7 @@ void Panel::do_redraw_now(const bool handle_input, const std::string& message) {
 	RenderTarget& rt = *g_gr->get_render_target();
 
 	{
-		MutexLock m(MutexLock::ID::kObjects, [this]() { handle_notes(); });
+		handle_notes();
 		ff.do_draw(rt);
 	}
 
