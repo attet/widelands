@@ -841,6 +841,9 @@ bool WLApplication::poll_event(SDL_Event& ev) {
 		if (mouse_locked_) {
 			ev.motion.x = mouse_position_.x;
 			ev.motion.y = mouse_position_.y;
+			static double mul = 1.9;
+			ev.motion.xrel*=mul;
+			ev.motion.yrel*=mul;
 		}
 		break;
 
