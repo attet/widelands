@@ -155,9 +155,9 @@ static std::string to_string(const MutexLock::ID i) {
 }
 #endif
 
-constexpr uint32_t kMutexPriorityLockInterval = 2;
-constexpr uint32_t kMutexNormalLockInterval = 30;
-constexpr uint32_t kMutexLogicFrameLockInterval = 400;
+constexpr uint32_t kMutexPriorityLockInterval = 1;
+constexpr uint32_t kMutexNormalLockInterval = 1;
+constexpr uint32_t kMutexLogicFrameLockInterval = 20;
 
 // To protect the global mutex list
 std::mutex MutexLock::s_mutex_;
